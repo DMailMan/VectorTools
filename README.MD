@@ -1,0 +1,4 @@
+This is a collection of scripts and tools useful when working with Actian Vector and Vector-H databases.
+Each item is standalone and will provide some usage information if executed with no parameters.
+
+vector-minmax.sh: Script to analyse the distribution of data in a Vector min/max index. This indicates whether the data in the table is stored in sorted order for the column specified, which can be a significant performance factor if this is a join column. Disordered Mix-Max indexes mean that Vector has to scan much more of the table to find blocks that satisfy the restrictions in the query's WHERE clause.
