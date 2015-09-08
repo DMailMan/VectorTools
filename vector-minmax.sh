@@ -19,9 +19,9 @@
 
 
 # Check we have all the necessary parameters
-if [ $# -ne 4 ]
+if [ $# -lt 4 ]
 then
-	echo 'Usage: $0 databasename table-owner table-name column-name'
+	echo 'Usage: $0 databasename table-owner table-name column-name [partition number]'
 	exit 1
 fi
 
@@ -29,6 +29,7 @@ DBNAME=${1}
 TOWNER=${2}
 TNAME=${3}
 CNAME=${4}
+PTN=${5}
 
 # Provide some defaults. Change these if you want to increase convenience.
 if [ "${DBNAME}" = "" ]
@@ -51,13 +52,23 @@ then
 	CNAME="cobid"
 fi
 
+# Default the partiton to all partitions (for both partitioned and non partitioned tables) or add the "@" character if a partition is specified
+if [ "${PTN}" = "" ]
+then
+	PTN="%"
+else
+	PTN="@${PTN}"
+fi
 
-TNAMEX100="_${TOWNER}S${TNAME}"
+# Include the partition spec in the x100 table name
+TNAMEX100="_${TOWNER}S${TNAME}${PTN}"
 CNAMEX100="_${CNAME}"
 DATAFILE="/tmp/${0}.dat"
 DATATABLE="minmax_deleteme"
 
-echo "Database: ${DBNAME}, Owner: ${TOWNER}, Table: ${TNAME} [ ${TNAMEX100} ], Column: ${CNAME} [ ${CNAMEX100} ]"
+# Include partiton spec
+echo "Database: ${DBNAME}, Owner: ${TOWNER}, Table/Partition: ${TNAME}/${PTN} [ ${TNAMEX100} ], Column: ${CNAME} [ ${CNAMEX100} ]"
+
 if [ -d "$II_SYSTEM/ingres/data/vectorwise/$DBNAME/CBM" ]
 then
 	# Vector
@@ -103,7 +114,9 @@ HashJoin01 (
 		 	, [ table_id ] [ column_name, column_offset ]
 		,Select(
 		 	 SysScan('tables', ['table_name', 'table_id'])
-			,==(table_name, '${TNAMEX100}')
+# LHS R1 Change the condition to a like
+#			,==(table_name, '${TNAMEX100}')
+			,like(table_name, '${TNAMEX100}')
 		 )
 			,[ table_id ] [ table_name ]
 	 )
@@ -113,10 +126,14 @@ HashJoin01 (
 
 EOF
 
+# Uncomment to debug
+#cat ${DATAFILE}
+#exit
 
 sql ${DBNAME} << EOF
 
 drop table if exists ${DATATABLE}; \g
+
 
 create table ${DATATABLE} (
 	 RowId		integer8	not null
@@ -127,38 +144,58 @@ create table ${DATATABLE} (
 )
 ;\g
 
+-- LHS R1 Fix order of table name and column name
 copy table ${DATATABLE} (
 	 RowId		= 'c0|'
 	,MinValue	= 'c0|'
 	,MaxValue	= 'c0|'
-	,TableName	= 'c0|'
-	,ColName	= 'c0nl'
+	,ColName	= 'c0|'
+	,TableName	= 'c0nl'
 )
 from '${DATAFILE}'
 ;\g
 
-select top 1
+-- This no longer applies for partitioned tables
+--select top 1
+--	 TableName
+--	,ColName
+--  from ${DATATABLE}
+--;\g
+
+-- Include basic output
+select
+         row_number() over (partition by TableName order by RowId) as LineNum
+        ,RowId
+        ,MinValue
+        ,MaxValue
+        ,TableName
+  from
+         ${DATATABLE}
+order by
 	 TableName
-	,ColName
-  from ${DATATABLE}
+	,LineNum
 ;\g
 
+-- Take into account partition name (Tablename)
+-- Name columns to make more readable
 with MinMaxData as (
 	select
---		 row_number() over (order by MinValue) as LineNum
-		 row_number() over (order by RowId) as LineNum
+--		 row_number() over (partition by TableName order by MinValue) as LineNum
+		 row_number() over (partition by TableName order by RowId) as LineNum
 		,RowId
 		,MinValue
 		,MaxValue
+		,TableName
 	  from
 		 ${DATATABLE}
 )
 select
-	 mm1.LineNum
-	,mm1.MinValue
-	,mm1.MaxValue
-	,mm2.MinValue
-	,mm2.MaxValue
+	 mm1.TableName
+	,mm1.LineNum
+	,mm1.MinValue as mm1_MinValue
+	,mm1.MaxValue as mm1_MaxValue
+	,mm2.MinValue as mm2_MinValue
+	,mm2.MaxValue as mm2_MaxValue
 	,mm2.RowId - mm1.RowId as rows
 	,case
 		when mm1.MaxValue > mm2.MinValue then 1
@@ -168,9 +205,11 @@ select
 	 MinMaxData mm1
 	,MinMaxData mm2
  where
-	mm1.LineNum = mm2.LineNum - 1
+	mm1.TableName = mm2.TableName
+   and	mm1.LineNum = mm2.LineNum - 1
 order by
-	 mm1.LineNum
+	 mm1.TableName
+	,mm1.LineNum
 ;\g
 
 EOF
