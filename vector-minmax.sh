@@ -19,6 +19,7 @@
 
 
 # Check we have all the necessary parameters
+# Now have optional 5th parameer 
 if [ $# -lt 4 ]
 then
 	echo 'Usage: $0 databasename table-owner table-name column-name [partition number]'
@@ -53,21 +54,58 @@ then
 fi
 
 # Default the partiton to all partitions (for both partitioned and non partitioned tables) or add the "@" character if a partition is specified
+# Tidy test for partitioning and forming the x100 name
 if [ "${PTN}" = "" ]
 then
 	PTN="%"
-else
-	PTN="@${PTN}"
 fi
 
+# Move getting the DDL higher up so that we can test if table is partitioned.
+# Get the datatype for the column, so we can store the values later in the temp table
+# Dumps the table schema to a file in /tmp then grabs the column datatype from that
+copydb -u${TOWNER} ${DBNAME} ${TNAME} >copydb.log 2>&1
+ERRORS=$(grep E_ copydb.log)
+if [ "${ERRORS}" != "" ]
+then
+	echo "Problems accessing database ${DBNAME} and table ${TNAME} owned by ${TOWNER} - please check details and permissions."
+	exit 1
+fi
+
+# Provide a default if the above didn't work for some reason
+
+# Add a space to differentiate beween say col1 and col10
+# Treat timestamps and dates as integers
+CTYPE=$(grep "${CNAME} " copy.in |cut -d' ' -f2|head -1|cut -d "(" -f1 )
+
+if [ "${CTYPE}" = "" ] || [ "${CTYPE}" = "ansidate" ] || [ "${CTYPE}" = "timestamp" ]
+then
+	CTYPE="integer8"
+fi
+
+#echo ${CTYPE}
+#exit
+
+# Check if table is partitioned
+if [ -z "`grep 'partition = (HASH' copy.in`" ]
+then
+	# Not Partitioned
+	MATCHFUNC="=="
+	TNAMEX100="_${TOWNER}S${TNAME}"
+else
+	# Partitioned
+	MATCHFUNC="like"
+	TNAMEX100="_${TOWNER}S${TNAME}@${PTN}"
+fi
+
+rm copy.out copy.in copydb.log
+
 # Include the partition spec in the x100 table name
-TNAMEX100="_${TOWNER}S${TNAME}${PTN}"
 CNAMEX100="_${CNAME}"
 DATAFILE="/tmp/${0}.dat"
 DATATABLE="minmax_deleteme"
 
-# Include partiton spec
-echo "Database: ${DBNAME}, Owner: ${TOWNER}, Table/Partition: ${TNAME}/${PTN} [ ${TNAMEX100} ], Column: ${CNAME} [ ${CNAMEX100} ]"
+#  Include partition spec
+echo "Database: ${DBNAME}, Owner: ${TOWNER}, Table/Partition: ${TNAME}/${PTN} [ ${TNAMEX100} ], Column: ${CNAME} [ ${CNAMEX100} Datatype: ${CTYPE} ]"
 
 if [ -d "$II_SYSTEM/ingres/data/vectorwise/$DBNAME/CBM" ]
 then
@@ -76,27 +114,6 @@ then
 else
 	# Vector-H
 	LOCKDIR="$II_SYSTEM/ingres/data/vectorwise/$DBNAME"
-fi
-
-# Get the datatype for the column, so we can store the values later in the temp table
-# Dumps the table schema to a file in /tmp then grabs the column datatype from that
-copydb -u${TOWNER} ${DBNAME} ${TNAME} >copydb.log 2>&1
-ERRORS=$(grep E_ copydb.log)
-
-if [ "${ERRORS}" != "" ]
-then
-	echo "Problems accessing database ${DBNAME} and table ${TNAME} owned by ${TOWNER} - please check details and permissions"
-	exit 1
-fi
-
-CTYPE=$(grep ${CNAME} copy.in |cut -d' ' -f2|head -1)
-
-rm copy.out copy.in copydb.log
-
-# Provide a default if the above didn't work for some reason
-if [ "${CTYPE}" = "" ]
-then
-	CTYPE="integer8"
 fi
 
 # For Vector
@@ -114,9 +131,11 @@ HashJoin01 (
 		 	, [ table_id ] [ column_name, column_offset ]
 		,Select(
 		 	 SysScan('tables', ['table_name', 'table_id'])
-# LHS R1 Change the condition to a like
+#  Change the condition to a like
+# Matching function depends if table is partitioned
 #			,==(table_name, '${TNAMEX100}')
-			,like(table_name, '${TNAMEX100}')
+#			,like(table_name, '${TNAMEX100}')
+			,${MATCHFUNC}(table_name, '${TNAMEX100}')
 		 )
 			,[ table_id ] [ table_name ]
 	 )
@@ -126,7 +145,7 @@ HashJoin01 (
 
 EOF
 
-# Uncomment to debug
+#  Debug
 #cat ${DATAFILE}
 #exit
 
@@ -144,7 +163,7 @@ create table ${DATATABLE} (
 )
 ;\g
 
--- LHS R1 Fix order of table name and column name
+--  Fix order of table name and column name
 copy table ${DATATABLE} (
 	 RowId		= 'c0|'
 	,MinValue	= 'c0|'
@@ -155,14 +174,14 @@ copy table ${DATATABLE} (
 from '${DATAFILE}'
 ;\g
 
--- This no longer applies for partitioned tables
+--  No longer applies for partitioned tables
 --select top 1
 --	 TableName
 --	,ColName
 --  from ${DATATABLE}
 --;\g
 
--- Include basic output
+--  Include basic output
 select
          row_number() over (partition by TableName order by RowId) as LineNum
         ,RowId
@@ -176,8 +195,8 @@ order by
 	,LineNum
 ;\g
 
--- Take into account partition name (Tablename)
--- Name columns to make more readable
+--  Take into account partition name (Tablename)
+--  Name columns to make more readable
 with MinMaxData as (
 	select
 --		 row_number() over (partition by TableName order by MinValue) as LineNum
