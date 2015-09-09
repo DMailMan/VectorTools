@@ -75,15 +75,18 @@ fi
 
 # Add a space to differentiate beween say col1 and col10
 # Treat timestamps and dates as integers
-CTYPE=$(grep "${CNAME} " copy.in |cut -d' ' -f2|head -1|cut -d "(" -f1 )
+CTYPE=$(grep "${CNAME} " copy.in |cut -d' ' -f2|head -1)
+CTYPETRUNC=$(echo "${CTYPE}" | cut -d "(" -f1 )
 
-if [ "${CTYPE}" = "" ] || [ "${CTYPE}" = "ansidate" ] || [ "${CTYPE}" = "timestamp" ]
+if [ "${CTYPETRUNC}" = "" ] || [ "${CTYPETRUNC}" = "ansidate" ] || [ "${CTYPETRUNC}" = "timestamp" ]
 then
 	CTYPE="integer8"
 fi
 
 #echo ${CTYPE}
 #exit
+
+rm copy.out copy.in copydb.log
 
 # Check if table is partitioned
 if [ -z "`grep 'partition = (HASH' copy.in`" ]
@@ -96,8 +99,6 @@ else
 	MATCHFUNC="like"
 	TNAMEX100="_${TOWNER}S${TNAME}@${PTN}"
 fi
-
-rm copy.out copy.in copydb.log
 
 # Include the partition spec in the x100 table name
 CNAMEX100="_${CNAME}"
