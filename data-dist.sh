@@ -29,6 +29,10 @@ then
 	exit 1
 fi
 
+echo "The number of rows in each partition in the table below should be roughly equal."
+echo "If they are not, then query performance will not be as optimal as it could be because"
+echo "a dispropportionate amount of the work will be done by a small number of nodes or threads."
+
 sql $1 <<EOF
 SELECT tid/10000000000000000 AS partition_id, COUNT(*) AS num_rows 
 FROM $2
