@@ -104,6 +104,9 @@ fi
 CNAMEX100="_${CNAME}"
 DATAFILE="/tmp/${0}.dat"
 DATATABLE="minmax_deleteme"
+# LHS R4 - TWO NEW TABLES
+DATATABLE2="minmax2_deleteme"
+DATATABLE3="minmax3_deleteme"
 
 #  Include partition spec
 echo "Database: ${DBNAME}, Owner: ${TOWNER}, Table/Partition: ${TNAME}/${PTN} [ ${TNAMEX100} ], Column: ${CNAME} [ ${CNAMEX100} Datatype: ${CTYPE} ]"
@@ -196,11 +199,14 @@ order by
 	,LineNum
 ;\g
 
---  Take into account partition name (Tablename)
---  Name columns to make more readable
-with MinMaxData as (
+- LHS R4 - EVERYTHING BELOW HERE IS NEW
+drop table if exists ${DATATABLE2};
+drop table if exists ${DATATABLE3};
+;\g
+
+
+create table ${DATATABLE2} as
 	select
---		 row_number() over (partition by TableName order by MinValue) as LineNum
 		 row_number() over (partition by TableName order by RowId) as LineNum
 		,RowId
 		,MinValue
@@ -208,7 +214,9 @@ with MinMaxData as (
 		,TableName
 	  from
 		 ${DATATABLE}
-)
+;\g
+
+create table ${DATATABLE3} as
 select
 	 mm1.TableName
 	,mm1.LineNum
@@ -222,15 +230,34 @@ select
 		else 0
 	 end as OverLap
   from
-	 MinMaxData mm1
-	,MinMaxData mm2
+	 ${DATATABLE2} mm1
+	,${DATATABLE2} mm2
  where
 	mm1.TableName = mm2.TableName
    and	mm1.LineNum = mm2.LineNum - 1
-order by
-	 mm1.TableName
-	,mm1.LineNum
 ;\g
+
+select * from ${DATATABLE3}
+order by
+	 TableName
+	,LineNum
+;\g
+
+select
+	 TableName
+	,sum(OverLap) as OverLaps
+	,count(*) as Total
+	,100.0 - decimal((decimal(sum(OverLap))/decimal(count(*)))*100.0,5,2) as SortedPct
+  from
+	 ${DATATABLE3}
+group by
+	 TableName
+;\g
+
+drop table ${DATATABLE};
+drop table ${DATATABLE2};
+drop table ${DATATABLE3};
+\g
 
 EOF
 
