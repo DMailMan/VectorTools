@@ -41,10 +41,6 @@
 #2016-04-26 11:00:06,13600321807,7441402489,3,25461059
 #2016-04-26 11:26:26,8259696240,12566530678,3,34660155
 
-# Note that for loading into Excel, the date format needs adjusting before it will be 
-# recognised properly. Excel likes data like this : 10/Mar/2016 HH:MM:SS
-
-
 
 BEGIN {
 	# Set up the list of fields we are interested in. Space-separate their names.
@@ -110,14 +106,14 @@ BEGIN {
 	fields["%log"]  = (fields["log_file_size"]/fields["threshold_log_condense"])*100;
 	fields["%memcontext"] = (fields["memcontext_allocated"]/fields["memcontext_maximum"])*100;
 
+	# Only print the row if there is decent data. Log condense threshold value is never really 1.
+	if (fields["threshold_log_condense"] > 1 ) {
+		# Start printing the output record for this block of time
+		printf record_date;
 
-	# Start printing the output record for this block of time
-	printf record_date;
+		for (field in fields) printf ",%d", fields[field];
 
-	for (field in fields) {
-		printf ",%d", fields[field];
+		# Cleanly terminate each line
+		printf "\r\n";
 	}
-
-	# Cleanly terminate each line
-	printf "\r\n";
 }
