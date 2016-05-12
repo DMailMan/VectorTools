@@ -20,7 +20,10 @@
 # September 7th 2015
 # D. Postle
 
-NODES=`cat $II_SYSTEM/ingres/files/hdfs/slaves|wc -l`
+# Updated May 2016 to change the default to one quarter of the cores in a cluster.
+# Also increased compatibility to also work on Vector systems that have no 'slaves' file.
+
+NODES=`cat $II_SYSTEM/ingres/files/slaves 2>/dev/null || echo one | wc -l`
 CORES=`cat /proc/cpuinfo|grep 'cpu cores'|sort|uniq|cut -d: -f 2`
 CPUS=`cat /proc/cpuinfo|grep 'physical id'|sort|uniq|wc -l`
-echo `expr $CORES "*" $CPUS "*" $NODES "/" 2`
+echo `expr $CORES "*" $CPUS "*" $NODES "/" 4`
