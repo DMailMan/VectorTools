@@ -31,3 +31,6 @@ Example: `./runall.sh -d testdb -g N -i $II_SYSTEM -k Y -m 15 -n 150 -p N -s /mn
 Script that is intended to be run regularly via cron to gather a snapshot of the memory usage information of Vector or VectorH over a period of days or weeks. This data should be appended to the same log file every time it runs.
 
 There is then a matching utility, `vwinfo-pivot.awk`, that is intended to parse the raw vwinfo log data and transform it into a CSV structure that can then be easily loaded into your favourite graphing or analysis tool. Excel, Apache Zeppelin, and Jupyter Notebook all work well for this sort of thing.
+
+#vector_hk_vp_install
+Script to install the Housekeeping and Query Performance analysis packages from the Actian repository in GitHub. The packages are fully configured and setup to run via crontab with appropriate defaults. It must be run as a user with access to the Vector installation, normally actian. Sudo access is required if the Housekeeping installation is to be fully configured i.e Log rotation is excluded otherwise.
