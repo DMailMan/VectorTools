@@ -272,9 +272,9 @@ then
     exit 1
 fi
 
-echo "0 23 * * *                        ${l_vector_profile}; cd ${l_package_1}; ${l_INSTALL_DIR}/${l_package_1}/vector_housekeeping.sh ${l_II_INSTALLATION}" >> ${l_cron_file}
+echo "0 23 * * *                        ${l_vector_profile}; cd ${l_INSTALL_DIR}/${l_package_1}; ${l_INSTALL_DIR}/${l_package_1}/vector_housekeeping.sh ${l_II_INSTALLATION}" >> ${l_cron_file}
 
-echo "0 2,4,6,8,10,12,14,16,18,20 * * * ${l_vector_profile}; cd ${l_package_2}; ${l_INSTALL_DIR}/${l_package_2}/load_vector_log.sh --log_db ${l_package_2_db} >/dev/null" >> ${l_cron_file}
+echo "0 2,4,6,8,10,12,14,16,18,20 * * * ${l_vector_profile}; cd ${l_INSTALL_DIR}/${l_package_2}; ${l_INSTALL_DIR}/${l_package_2}/load_vector_log.sh --log_db ${l_package_2_db} >/dev/null" >> ${l_cron_file}
 
 crontab ${l_cron_file} &>> ${l_message_log} 
 
