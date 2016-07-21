@@ -32,5 +32,7 @@ Script that is intended to be run regularly via cron to gather a snapshot of the
 
 There is then a matching utility, `vwinfo-pivot.awk`, that is intended to parse the raw vwinfo log data and transform it into a CSV structure that can then be easily loaded into your favourite graphing or analysis tool. Excel, Apache Zeppelin, and Jupyter Notebook all work well for this sort of thing.
 
-#vector_hk_vp_install
-Script to install the Housekeeping and Query Performance analysis packages from the Actian repository in GitHub. The packages are fully configured and setup to run via crontab with appropriate defaults. It must be run as a user with access to the Vector installation, normally actian. Sudo access is required if the Housekeeping installation is to be fully configured i.e Log rotation is excluded otherwise.
+#vector_hk_vp_install.sh
+Script to install the Housekeeping and Query Performance Analysis packages from the Actian repository in GitHub. The packages are fully configured and setup to run via crontab with appropriate defaults.  
+
+The script must be run as a user with access to the Vector installation, normally actian. Sudo access is required if the Housekeeping installation is to be fully configured i.e Log rotation is excluded otherwise.
