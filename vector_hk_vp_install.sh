@@ -34,7 +34,7 @@
 #
 # Name:
 #
-#   vector_hk_vp_install.sh
+#   vector_tools_install.sh
 #
 # Description:
 #
@@ -44,7 +44,7 @@
 #     - Query Performance Analsys every 2 hours except 10pm and 12pm to
 #       prevent any possible interference with House keeping.  
 #
-# Preresquites:
+# Pre-requisites:
 #
 #    For the install to succeed this script must be run as a user with access
 #    to the target Vector installation configured i.e ingXXsh run.
@@ -107,7 +107,7 @@ function LOG_MESSAGE
 # Script Main Body
 #----------------------------------------------------------------------------
 
-LOG_MESSAGE Program Name: $h_prog_name Starting
+LOG_MESSAGE Program Name: $l_prog_name Starting
 
 l_II_SYSTEM=$II_SYSTEM
 
@@ -161,6 +161,20 @@ then
     exit 9
 fi
 
+# Test for presence of git
+git --help >/dev/null 2>&1
+
+if [ $? -ne 0 ]
+then
+    LOG_MESSAGE "gitis required but is not installed - attempting installation now (requires sudo)."
+    sudo yum install -y git
+
+    if [ $? -ne 0 ]
+    then
+        LOG_MESSAGE "Unable to install git. Unable to proceed with installation without this."
+        exit 1
+    fi
+fi
 
 # 2. Download the installation packages
 
@@ -193,13 +207,17 @@ chmod 755 ${l_dir}/*
 sudo -v 2>&1 | grep "Sorry" > /dev/null
 
 if [ $? -eq 0 ]; then
-    LOG_MESSAGE "Unable to implement Vector log rotate as it appears there is no sudo access. CONTINUING as none critical"
+    LOG_MESSAGE "Unable to implement Vector log rotate as it appears there is no sudo access. CONTINUING as this is non critical"
+    LOG_MESSAGE "If you want to set this up manually, simply run the following command:"
+    LOG_MESSAGE "sudo cp ${l_dir}/vectorlogs-rotate.conf /etc/logrotate.d"
 else
     sudo cp ${l_dir}/vectorlogs-rotate.conf /etc/logrotate.d/. &>> ${l_message_log} 
 
     if [ $? -gt 0 ]
     then
-        LOG_MESSAGE "FAILED to implement Vector log rotate. CONTINUING as none critical"
+        LOG_MESSAGE "FAILED to implement Vector log rotate. CONTINUING as non critical"
+        LOG_MESSAGE "If you want to set this up manually, simply run the following command:"
+        LOG_MESSAGE "sudo cp ${l_dir}/vectorlogs-rotate.conf /etc/logrotate.d"
     fi
 fi
 
@@ -266,7 +284,7 @@ then
     exit 1
 fi
 
-LOG_MESSAGE Program Name: $h_prog_name Completed Successfully
+LOG_MESSAGE Program Name: $l_prog_name Completed Successfully
 
 exit 0
 
