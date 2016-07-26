@@ -36,3 +36,15 @@ There is then a matching utility, `vwinfo-pivot.awk`, that is intended to parse 
 Script to install the Housekeeping and Query Performance Analysis packages from the Actian repository in GitHub. The packages are fully configured and setup to run via crontab with appropriate defaults.  
 
 The script must be run as a user with access to the Vector installation, normally actian. Sudo access is required if the Housekeeping installation is to be fully configured i.e Log rotation is excluded otherwise.
+
+#file_browse.py, fileserver.sh
+This is a small Python Flask program to allow a remote user with a web browser to browse local files stored in the /tmp folder of a local filesystem. It's intended to make it easier to examine log files etc remotely, and is just for development purposes only. It requires the templates sub-folder and files.html, and fileserver.sh runs it.
+
+#profile_gen.sh
+Script that is intended to be run regularly via cron to automatically convert Vector .profile files into PDF query profile files for easier inspection.
+
+To use it, run it via cron (example included in the program for how to do this) and configure it to use the file paths you want. By default, it uses local path /tmp and HDFS path /Actian/tmp, and will run x100profgraph on any file it finds there with a .profile suffix. To produce these, just run something like this: 
+
+    call vectorwise(print_profile '''hdfs:///Actian/tmp/query.profile''');
+
+after the SQL statement that you want to produce a profile for.
