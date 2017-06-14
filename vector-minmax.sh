@@ -106,7 +106,7 @@ rm copy.out copy.in copydb.log
 
 # Include the partition spec in the x100 table name
 CNAMEX100="_${CNAME}"
-DATAFILE="/tmp/${0}.dat"
+DATAFILE="/tmp/${3}${4}.dat"
 DATATABLE="minmax_deleteme"
 DATATABLE2="minmax2_deleteme"
 DATATABLE3="minmax3_deleteme"
