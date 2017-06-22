@@ -67,3 +67,8 @@ To use it, run it via cron (example included in the program for how to do this) 
     call vectorwise(print_profile '''hdfs:///Actian/tmp/query.profile''');
 
 after the SQL statement that you want to produce a profile for.
+
+# compression_ratio.sh
+Script to calculate the compression ratio for data stored in a Vector/H database, vs the space used by the raw data. Uses an internal function that measures the uncompressed storage space used, and produces the output as a ratio.
+
+Just takes one parameter - the daabase name to measure. Needs to be run as the installation's DBA owner, to make sure that you have permissions to access and measure the right filesystem areas.
